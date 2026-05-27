@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  EDITOR
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         UserRole  @default(ADMIN)
+  posts        Post[]
+  sessions     Session[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Session {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Post {
+  id                    String      @id @default(cuid())
+  title                 String
+  slug                  String      @unique
+  excerpt               String?
+  contentHtml           String      @default("")
+  draftTitle            String?
+  draftExcerpt          String?
+  draftContentHtml      String?
+  hasUnpublishedChanges Boolean     @default(false)
+  status                PostStatus  @default(DRAFT)
+  coverImageId          String?
+  ogImageId             String?
+  authorId              String
+  publishedAt           DateTime?
+  seoTitle              String?
+  seoDescription        String?
+  metaTags              String?
+  canonicalUrl          String?
+  readingTimeMinutes    Int         @default(1)
+  legacySource          String?
+  legacyId              String?
+  legacyUrl             String?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  author                User        @relation(fields: [authorId], references: [id])
+  coverImage            MediaAsset? @relation("PostCoverImage", fields: [coverImageId], references: [id])
+  ogImage               MediaAsset? @relation("PostOgImage", fields: [ogImageId], references: [id])
+  categories            Category[]  @relation("CategoryToPost")
+  tags                  Tag[]       @relation("PostToTag")
+
+  @@unique([legacySource, legacyId])
+  @@index([status, publishedAt])
+  @@index([legacyUrl])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  posts       Post[]   @relation("CategoryToPost")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  posts     Post[]   @relation("PostToTag")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MediaAsset {
+  id            String   @id @default(cuid())
+  key           String   @unique
+  provider      String
+  filename      String
+  mimeType      String
+  size          Int
+  width         Int?
+  height        Int?
+  altText       String?
+  legacyUrl     String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  coverForPosts Post[]   @relation("PostCoverImage")
+  ogForPosts    Post[]   @relation("PostOgImage")
+}
+
+model NewsletterSubscriber {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  unsubscribeToken String    @unique
+  subscribedAt     DateTime  @default(now())
+  unsubscribedAt   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([unsubscribedAt, email])
+}
