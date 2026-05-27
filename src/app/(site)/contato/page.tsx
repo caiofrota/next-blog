@@ -1,6 +1,23 @@
+import type { Metadata } from "next";
 import { env } from "@/lib/env";
 import { ContactForm } from "@/site/components/contact/contact-form";
 import { SiteSidebar } from "@/site/components/sidebar/site-sidebar";
+import { brand } from "@/site/config/brand";
+
+const description = `Fale com o ${brand.name} para parcerias, pautas, sugestões e mensagens sobre o projeto.`;
+
+export const metadata: Metadata = {
+  title: "Contato",
+  description,
+  alternates: {
+    canonical: "/contato"
+  },
+  openGraph: {
+    title: `Contato | ${brand.name}`,
+    description,
+    url: "/contato"
+  }
+};
 
 export default function ContactPage() {
   return (

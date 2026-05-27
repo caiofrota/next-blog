@@ -8,6 +8,13 @@ export async function listTags() {
   });
 }
 
+export async function getTagBySlug(slug: string) {
+  return prisma.tag.findUnique({
+    where: { slug },
+    include: { _count: { select: { posts: true } } }
+  });
+}
+
 export async function listTagsPage(options: { take: number; skip: number }) {
   const [tags, total] = await Promise.all([
     prisma.tag.findMany({

@@ -8,6 +8,7 @@ export const brand: {
   logo: string | null;
   logoMobile: string | null;
   profileImage: string | null;
+  keywords: string[];
   bio: string;
 } = {
   name: "Next blog",
@@ -19,6 +20,7 @@ export const brand: {
   logo: null,
   logoMobile: null,
   profileImage: null,
+  keywords: ["Next.js", "blog", "CMS", "SEO", "newsletter", "WordPress migration", "blog engine"],
   bio:
     "Next blog reúne artigos, guias e novidades em uma experiência pensada para evoluir junto com cada novo projeto."
 };

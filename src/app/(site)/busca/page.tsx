@@ -1,9 +1,23 @@
+import type { Metadata } from "next";
 import { PostCard } from "@/site/components/post-card/post-card";
 import { SiteSidebar } from "@/site/components/sidebar/site-sidebar";
 import { searchPublishedPosts } from "@/blog-engine/services/posts";
 import { SiteSearchForm } from "@/site/components/search/site-search-form";
+import { brand } from "@/site/config/brand";
 
 export const revalidate = 30;
+
+export const metadata: Metadata = {
+  title: "Busca",
+  description: `Encontre artigos, guias e novidades publicados no ${brand.name}.`,
+  alternates: {
+    canonical: "/busca"
+  },
+  robots: {
+    index: false,
+    follow: true
+  }
+};
 
 export default async function SearchPage({ searchParams }: { searchParams: { q?: string } }) {
   const query = searchParams.q?.trim() ?? "";

@@ -10,6 +10,13 @@ export async function listCategories() {
   return categories;
 }
 
+export async function getCategoryBySlug(slug: string) {
+  return prisma.category.findUnique({
+    where: { slug },
+    include: { _count: { select: { posts: true } } }
+  });
+}
+
 export async function listCategoriesPage(options: { take: number; skip: number }) {
   const categories = await listCategories();
   const total = categories.length;

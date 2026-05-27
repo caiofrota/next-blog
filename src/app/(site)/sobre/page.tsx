@@ -1,5 +1,19 @@
+import type { Metadata } from "next";
 import { brand } from "@/site/config/brand";
 import { SiteSidebar } from "@/site/components/sidebar/site-sidebar";
+
+export const metadata: Metadata = {
+  title: `Sobre o ${brand.name}`,
+  description: brand.bio,
+  alternates: {
+    canonical: "/sobre"
+  },
+  openGraph: {
+    title: `Sobre o ${brand.name}`,
+    description: brand.bio,
+    url: "/sobre"
+  }
+};
 
 export default function AboutPage() {
   return (

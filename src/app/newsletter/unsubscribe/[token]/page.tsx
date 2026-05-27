@@ -1,7 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { unsubscribeNewsletterByToken } from "@/blog-engine/services/newsletter";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Descadastro da newsletter",
+  robots: {
+    index: false,
+    follow: false
+  }
+};
 
 export default async function NewsletterUnsubscribePage({ params }: { params: { token: string } }) {
   const result = await unsubscribeNewsletterByToken(params.token);
