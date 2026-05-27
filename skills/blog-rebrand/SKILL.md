@@ -1,11 +1,11 @@
 ---
 name: blog-rebrand
-description: Rebrand this Blog Base project for a new single-site blog by replacing visual identity, names, social links, categories, public copy, and environment defaults while preserving the reusable blog engine and admin functionality.
+description: Rebrand this Next blog project for a new single-site blog by replacing visual identity, names, social links, categories, public copy, and environment defaults while preserving the reusable blog engine and admin functionality.
 ---
 
 # Blog Rebrand
 
-Use this skill when adapting this repository from the neutral `Blog Base` starter into a branded blog.
+Use this skill when adapting this repository from the neutral `Next blog` starter into a branded blog.
 
 ## Workflow
 
@@ -24,7 +24,7 @@ Use this skill when adapting this repository from the neutral `Blog Base` starte
    - email templates under `src/lib`
 5. Add or update brand assets in `public/brand` only when actual assets are supplied or generated for the new site.
 6. Search for leftovers before finishing:
-   - `rg -n "Blog Base|example.com|Caio Frota|TODO brand|starter"`
+   - `rg -n "Next blog|example.com|Caio Frota|TODO brand|starter"`
    - also search for the previous project's name/domain if replacing an already branded implementation.
 7. Validate with `pnpm typecheck` and `pnpm build`.
 

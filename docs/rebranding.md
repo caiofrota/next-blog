@@ -11,7 +11,7 @@ Use this checklist when turning this neutral base into a branded blog.
 5. Update `.env.example` defaults.
 6. Update `prisma/seed.ts` category names.
 7. Replace public copy in `src/app/(site)` and `src/site/components`.
-8. Run `rg -n "Blog Base|example.com|Caio Frota"` and remove leftovers when applying a final brand.
+8. Run `rg -n "Next blog|example.com|Caio Frota"` and remove leftovers when applying a final brand.
 
 ## Color Tokens
 

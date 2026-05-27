@@ -18,7 +18,7 @@ const envSchema = z.object({
   SMTP_PASS: optionalString,
   SMTP_MAIL_TO: optionalEmail,
   SMTP_MAIL_FROM: optionalEmail,
-  SMTP_FROM_NAME: z.preprocess((value) => (value === "" ? undefined : value), z.string().min(1).default("Blog Base")),
+  SMTP_FROM_NAME: z.preprocess((value) => (value === "" ? undefined : value), z.string().min(1).default("Next blog")),
   R2_ACCOUNT_ID: optionalString,
   R2_ACCESS_KEY_ID: optionalString,
   R2_SECRET_ACCESS_KEY: optionalString,

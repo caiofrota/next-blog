@@ -10,8 +10,8 @@ export const brand: {
   profileImage: string | null;
   bio: string;
 } = {
-  name: "Blog Base",
-  description: "Uma base reutilizável para qualquer tipo de blog.",
+  name: "Next blog",
+  description: "Uma base Next.js para construir o próximo blog em outro nível.",
   author: "Caio Frota",
   instagram: "https://instagram.com/jcaiofrota",
   facebook: "#",
@@ -20,5 +20,5 @@ export const brand: {
   logoMobile: null,
   profileImage: null,
   bio:
-    "Este espaço reúne artigos, guias e novidades sobre temas variados. Ajuste este texto em src/site/config/brand.ts quando aplicar a identidade do novo projeto."
+    "Next blog reúne artigos, guias e novidades em uma experiência pensada para evoluir junto com cada novo projeto."
 };

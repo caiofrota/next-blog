@@ -11,7 +11,7 @@ type SeoPost = Post & {
 
 export function postMetadata(post: SeoPost): Metadata {
   const title = post.seoTitle ?? post.title;
-  const description = post.seoDescription ?? post.excerpt ?? "Blog Base";
+  const description = post.seoDescription ?? post.excerpt ?? "Next blog";
   const url = post.canonicalUrl ?? `${env.APP_URL}/posts/${post.slug}`;
   const keywords = parseMetaTags(post.metaTags);
   const imageKey = post.ogImage?.key ?? post.coverImage?.key;

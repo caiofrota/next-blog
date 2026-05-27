@@ -1,8 +1,8 @@
-# Blog Base
+# Next blog
 
-Next.js App Router blog base for reusable single-site blog projects.
+Next.js App Router blog base for building the next reusable, next-level blog project.
 
-This project is a starter, not a finished branded site. Public naming, colors, imagery, categories, social links, and writing tone should be replaced for each new implementation.
+The name works both as a reference to the Next.js stack and as a signal that this is the next blog foundation to reuse and improve.
 
 ## What This Repo Is For
 

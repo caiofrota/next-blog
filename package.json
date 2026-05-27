@@ -1,7 +1,7 @@
 {
-  "name": "blog-base",
+  "name": "next-blog",
   "version": "0.1.0",
-  "description": "Reusable Next.js base for blogs with public area, content administration, newsletter, SEO and WordPress migration.",
+  "description": "Next.js blog base for building the next reusable, next-level blog project.",
   "author": "Caio Frota <caiofrota@gmail.com>",
   "license": "MIT",
   "private": true,
