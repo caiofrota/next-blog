@@ -5,6 +5,9 @@ const optionalUrl = z.preprocess((value) => (value === "" ? undefined : value), 
 const optionalEmail = z.preprocess((value) => (value === "" ? undefined : value), z.string().email().optional());
 
 const envSchema = z.object({
+  DEMO_MODE: z.preprocess((value) => value === "true" || value === "1", z.boolean().default(false)),
+  DEMO_ADMIN_EMAIL: z.string().email().default("demo@nextblog.dev"),
+  DEMO_ADMIN_PASSWORD: z.string().min(8).default("nextblog-demo"),
   DATABASE_URL: optionalString,
   APP_URL: z.string().url().default("http://localhost:3000"),
   CONTACT_EMAIL: z.string().email().default("contato@example.com"),

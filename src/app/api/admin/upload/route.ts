@@ -5,6 +5,8 @@ import { getStorageProvider } from "@/blog-engine/storage/r2-storage";
 import { getPublicStorageUrl } from "@/blog-engine/storage/public-url";
 import { allowedImageTypes } from "@/blog-engine/validation/media";
 import { slugify } from "@/lib/slug";
+import { env } from "@/lib/env";
+import { createDemoMediaAsset } from "@/blog-engine/demo/data";
 
 const MAX_UPLOAD_SIZE_BYTES = 8 * 1024 * 1024;
 
@@ -41,6 +43,12 @@ export async function POST(request: NextRequest) {
   const fileName = `${Date.now()}-${slugify(file.name.replace(/\.[^.]+$/, ""))}.${ext}`;
   const key = `uploads/${new Date().getFullYear()}/${fileName}`;
   const buffer = Buffer.from(await file.arrayBuffer());
+
+  if (env.DEMO_MODE) {
+    const asset = createDemoMediaAsset(file.name, file.type, file.size, altText || null);
+    return NextResponse.json({ ...asset, url: getPublicStorageUrl(asset.key), simulated: true });
+  }
+
   const storage = getStorageProvider();
   const uploaded = await storage.putObject({ key, body: buffer, contentType: file.type });
   const asset = await createMediaAsset({

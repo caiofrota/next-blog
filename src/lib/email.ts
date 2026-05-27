@@ -45,6 +45,15 @@ function getDefaultRecipients() {
 }
 
 export async function sendEmail(input: SendEmailInput) {
+  if (env.DEMO_MODE) {
+    console.info("[demo-mode] Email simulated", {
+      subject: input.subject,
+      to: input.to?.map((recipient) => recipient.email) ?? getDefaultRecipients().map((recipient) => recipient.email),
+      bcc: input.bcc?.map((recipient) => recipient.email)
+    });
+    return;
+  }
+
   assertSmtpConfigured();
 
   const transport = nodemailer.createTransport({

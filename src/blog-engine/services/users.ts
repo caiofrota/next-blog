@@ -1,6 +1,8 @@
 import { Prisma, UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
+import { env } from "@/lib/env";
+import { demoPosts, demoUser } from "@/blog-engine/demo/data";
 
 export type AdminUserSortField = "name" | "email" | "role" | "postsCount" | "createdAt";
 export type SortDirection = "asc" | "desc";
@@ -48,6 +50,15 @@ function compareText(left: string, right: string) {
 }
 
 export async function listAdminUsers() {
+  if (env.DEMO_MODE) {
+    return [
+      {
+        ...demoUser,
+        _count: { posts: demoPosts.length }
+      }
+    ];
+  }
+
   return prisma.user.findMany({
     include: { _count: { select: { posts: true } } },
     orderBy: { name: "asc" }
@@ -81,6 +92,16 @@ export function sortAdminUsers(users: AdminUserWithCount[], sort: AdminUserSortF
 
 export async function createAdminUser(input: { name: string; email: string; role: string; password?: string | null }) {
   const normalized = normalizeUserInput(input, { passwordRequired: true });
+  if (env.DEMO_MODE) {
+    return {
+      ...demoUser,
+      id: `demo-user-${normalized.email}`,
+      name: normalized.name,
+      email: normalized.email,
+      role: normalized.role
+    };
+  }
+
   await assertUniqueEmail(normalized.email);
 
   return prisma.user.create({
@@ -95,6 +116,17 @@ export async function createAdminUser(input: { name: string; email: string; role
 
 export async function updateAdminUser(id: string, input: { name: string; email: string; role: string; password?: string | null }) {
   const normalized = normalizeUserInput(input, { passwordRequired: false });
+  if (env.DEMO_MODE) {
+    return {
+      ...demoUser,
+      id,
+      name: normalized.name,
+      email: normalized.email,
+      role: normalized.role,
+      updatedAt: new Date()
+    };
+  }
+
   await assertUniqueEmail(normalized.email, id);
 
   return prisma.user.update({
@@ -110,6 +142,7 @@ export async function updateAdminUser(id: string, input: { name: string; email: 
 
 export async function deleteAdminUser(id: string, currentUserId: string) {
   if (id === currentUserId) throw new Error("cannot_delete_self");
+  if (env.DEMO_MODE) return demoUser;
 
   const user = await prisma.user.findUnique({
     where: { id },

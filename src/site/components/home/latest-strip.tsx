@@ -27,7 +27,7 @@ export function LatestStrip({ posts }: { posts: SerializedPost[] }) {
         >
           ←
         </button>
-        <div ref={scrollerRef} className="flex snap-x gap-5 overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div ref={scrollerRef} className="flex min-w-0 flex-1 snap-x justify-center gap-5 overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {posts.slice(0, 20).map((post) => (
             <Link
               key={post.id}

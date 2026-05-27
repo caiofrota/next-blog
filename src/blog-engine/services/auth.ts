@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { createSessionToken, hashToken } from "@/lib/security";
 import { verifyPassword } from "@/lib/password";
+import { demoUser } from "@/blog-engine/demo/data";
 
 export const adminSessionCookieName = "admin_session";
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
@@ -48,6 +49,11 @@ export async function createSession(userId: string) {
   const token = createSessionToken();
   const expiresAt = new Date(Date.now() + env.SESSION_MAX_AGE_DAYS * 24 * 60 * 60 * 1000);
 
+  if (env.DEMO_MODE) {
+    cookies().set(adminSessionCookieName, token, buildSessionCookieOptions(expiresAt));
+    return { token, expiresAt };
+  }
+
   await prisma.session.create({
     data: {
       userId,
@@ -64,6 +70,7 @@ export async function createSession(userId: string) {
 export async function getCurrentUser() {
   const token = cookies().get(adminSessionCookieName)?.value;
   if (!token) return null;
+  if (env.DEMO_MODE) return demoUser;
 
   const session = await prisma.session.findUnique({
     where: { tokenHash: hashToken(token) },
@@ -82,7 +89,7 @@ export async function requireAdmin() {
 
 export async function logout() {
   const token = cookies().get(adminSessionCookieName)?.value;
-  if (token) {
+  if (token && !env.DEMO_MODE) {
     await prisma.session.updateMany({
       where: { tokenHash: hashToken(token), revokedAt: null },
       data: { revokedAt: new Date() }
@@ -96,6 +103,7 @@ export async function authMiddleware(request: NextRequest) {
   const loginUrl = new URL("/admin/login", request.url);
 
   if (!token) return NextResponse.redirect(loginUrl);
+  if (env.DEMO_MODE) return NextResponse.next();
 
   const session = await prisma.session.findUnique({
     where: { tokenHash: hashToken(token) },

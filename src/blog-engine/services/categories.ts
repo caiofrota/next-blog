@@ -1,7 +1,18 @@
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
+import { env } from "@/lib/env";
+import { demoCategories, demoPosts } from "@/blog-engine/demo/data";
 
 export async function listCategories() {
+  if (env.DEMO_MODE) {
+    return demoCategories
+      .map((category) => ({
+        ...category,
+        _count: { posts: demoPosts.filter((post) => post.categories.some((item) => item.id === category.id)).length }
+      }))
+      .sort((left, right) => left.name.localeCompare(right.name, "pt-BR", { sensitivity: "base" }));
+  }
+
   const categories = await prisma.category.findMany({
     orderBy: { name: "asc" },
     include: { _count: { select: { posts: true } } }
@@ -11,6 +22,15 @@ export async function listCategories() {
 }
 
 export async function getCategoryBySlug(slug: string) {
+  if (env.DEMO_MODE) {
+    const category = demoCategories.find((item) => item.slug === slug);
+    if (!category) return null;
+    return {
+      ...category,
+      _count: { posts: demoPosts.filter((post) => post.categories.some((item) => item.id === category.id)).length }
+    };
+  }
+
   return prisma.category.findUnique({
     where: { slug },
     include: { _count: { select: { posts: true } } }
@@ -29,6 +49,8 @@ export async function listCategoriesPage(options: { take: number; skip: number }
 }
 
 export async function countPostsWithoutCategory() {
+  if (env.DEMO_MODE) return demoPosts.filter((post) => post.categories.length === 0).length;
+
   return prisma.post.count({
     where: {
       categories: { none: {} }
@@ -71,6 +93,15 @@ async function assertUniqueCategory(name: string, slug: string, id?: string) {
 
 export async function createCategory(name: string, description?: string | null, slug?: string | null) {
   const normalized = normalizeCategoryInput(name, description, slug);
+  if (env.DEMO_MODE) {
+    return {
+      id: `demo-category-${normalized.slug}`,
+      ...normalized,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+  }
+
   await assertUniqueCategory(normalized.name, normalized.slug);
 
   return prisma.category.create({
@@ -80,6 +111,15 @@ export async function createCategory(name: string, description?: string | null, 
 
 export async function upsertCategory(name: string, description?: string | null, slug?: string | null) {
   const normalized = normalizeCategoryInput(name, description, slug);
+  if (env.DEMO_MODE) {
+    return {
+      id: `demo-category-${normalized.slug}`,
+      ...normalized,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+  }
+
   return prisma.category.upsert({
     where: { slug: normalized.slug },
     create: normalized,
@@ -89,6 +129,15 @@ export async function upsertCategory(name: string, description?: string | null, 
 
 export async function updateCategory(id: string, name: string, description?: string | null, slug?: string | null) {
   const normalized = normalizeCategoryInput(name, description, slug);
+  if (env.DEMO_MODE) {
+    return {
+      id,
+      ...normalized,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+  }
+
   await assertUniqueCategory(normalized.name, normalized.slug, id);
 
   return prisma.category.update({
@@ -98,6 +147,8 @@ export async function updateCategory(id: string, name: string, description?: str
 }
 
 export async function deleteCategory(id: string) {
+  if (env.DEMO_MODE) return demoCategories.find((category) => category.id === id) ?? null;
+
   const posts = await prisma.post.findMany({
     where: { categories: { some: { id } } },
     select: { id: true }

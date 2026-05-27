@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
+import { demoNewsletterSubscribers } from "@/blog-engine/demo/data";
 
 export type NewsletterSubscriberRecord = {
   id: string;
@@ -25,6 +26,8 @@ export function buildNewsletterUnsubscribeUrl(token: string) {
 }
 
 export async function listNewsletterSubscribers() {
+  if (env.DEMO_MODE) return demoNewsletterSubscribers;
+
   return prisma.$queryRaw<NewsletterSubscriberRecord[]>`
     SELECT
       "id",
@@ -41,6 +44,8 @@ export async function listNewsletterSubscribers() {
 }
 
 export async function countNewsletterSubscribers() {
+  if (env.DEMO_MODE) return demoNewsletterSubscribers.length;
+
   const rows = await prisma.$queryRaw<{ count: bigint }[]>`
     SELECT COUNT(*)::bigint AS count
     FROM "NewsletterSubscriber"
@@ -52,6 +57,22 @@ export async function countNewsletterSubscribers() {
 
 export async function subscribeNewsletter(email: string) {
   const normalizedEmail = normalizeEmail(email);
+  if (env.DEMO_MODE) {
+    return {
+      subscriber: {
+        id: `demo-subscriber-${normalizedEmail}`,
+        email: normalizedEmail,
+        unsubscribeToken: randomUUID(),
+        subscribedAt: new Date(),
+        unsubscribedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      created: true,
+      resubscribed: false
+    };
+  }
+
   const existing = await prisma.$queryRaw<NewsletterSubscriberRecord[]>`
     SELECT
       "id",
@@ -130,6 +151,11 @@ export async function subscribeNewsletter(email: string) {
 }
 
 export async function unsubscribeNewsletterByToken(token: string) {
+  if (env.DEMO_MODE) {
+    const subscriber = demoNewsletterSubscribers.find((item) => item.unsubscribeToken === token);
+    return subscriber ? { ...subscriber, unsubscribedAt: new Date(), updatedAt: new Date() } : null;
+  }
+
   const subscriber = (
     await prisma.$queryRaw<NewsletterSubscriberRecord[]>`
       SELECT

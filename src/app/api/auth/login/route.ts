@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { adminSessionCookieName, checkLoginRateLimit, createSession, getClientIp } from "@/blog-engine/services/auth";
 import { verifyPassword } from "@/lib/password";
 import { loginSchema } from "@/blog-engine/validation/auth";
+import { env } from "@/lib/env";
+import { demoUser } from "@/blog-engine/demo/data";
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -21,8 +23,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Muitas tentativas. Aguarde alguns minutos e tente novamente." }, { status: 429 });
   }
 
-  const user = await prisma.user.findUnique({ where: { email: parsed.data.email.toLowerCase() } });
-  if (!user || !(await verifyPassword(user.passwordHash, parsed.data.password))) {
+  const user = env.DEMO_MODE ? demoUser : await prisma.user.findUnique({ where: { email: parsed.data.email.toLowerCase() } });
+  const validPassword = env.DEMO_MODE
+    ? parsed.data.email.toLowerCase() === env.DEMO_ADMIN_EMAIL.toLowerCase() && parsed.data.password === env.DEMO_ADMIN_PASSWORD
+    : Boolean(user && (await verifyPassword(user.passwordHash, parsed.data.password)));
+
+  if (!user || !validPassword) {
     await new Promise((resolve) => setTimeout(resolve, 500));
     return NextResponse.json({ ok: false, error: "Email ou senha inválidos." }, { status: 401 });
   }

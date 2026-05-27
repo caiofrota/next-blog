@@ -1,11 +1,13 @@
 import { PostStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
+import { env } from "@/lib/env";
 import { getReadingTimeMinutes } from "@/blog-engine/seo/reading-time";
 import type { PostInput } from "@/blog-engine/validation/post";
 import { normalizeMediaUrlsInHtml, sanitizePostHtml } from "@/blog-engine/storage/html";
 import { cleanWordPressExcerpt } from "@/blog-engine/seo/text";
 import { EMPTY_TAXONOMY_FILTER } from "@/blog-engine/admin/post-filter-constants";
+import { createDemoPostFromInput, demoPosts } from "@/blog-engine/demo/data";
 
 export const postInclude = {
   author: true,
@@ -118,6 +120,31 @@ function buildScheduledWhere(): Prisma.PostWhereInput {
   return getScheduledPostWhere();
 }
 
+function filterDemoAdminPosts(filters?: AdminPostFilters) {
+  let posts = [...demoPosts];
+  if (filters?.status === "PUBLISHED") {
+    posts = posts.filter((post) => post.status === PostStatus.PUBLISHED && (!post.publishedAt || post.publishedAt <= getNow()));
+  } else if (filters?.status === "DRAFT") {
+    posts = posts.filter((post) => post.status === PostStatus.DRAFT);
+  } else if (filters?.status === "SCHEDULED") {
+    posts = posts.filter((post) => post.status === PostStatus.PUBLISHED && Boolean(post.publishedAt && post.publishedAt > getNow()));
+  } else if (filters?.status === "PENDING_CHANGES") {
+    posts = posts.filter((post) => post.hasUnpublishedChanges);
+  }
+
+  const categorySlugs = filters?.categorySlugs?.filter((slug) => slug !== EMPTY_TAXONOMY_FILTER) ?? [];
+  if (categorySlugs.length > 0) {
+    posts = posts.filter((post) => post.categories.some((category) => categorySlugs.includes(category.slug)));
+  }
+
+  const tagSlugs = filters?.tagSlugs?.filter((slug) => slug !== EMPTY_TAXONOMY_FILTER) ?? [];
+  if (tagSlugs.length > 0) {
+    posts = posts.filter((post) => post.tags.some((tag) => tagSlugs.includes(tag.slug)));
+  }
+
+  return posts;
+}
+
 function rankAdminTitleMatch(title: string, query: string) {
   const normalizedQuery = normalizeSearchText(query);
   if (!normalizedQuery) {
@@ -221,6 +248,19 @@ function sortAdminPosts(posts: AdminPostWithRelations[], sort?: AdminPostSortFie
 }
 
 export async function listPublishedPosts(options: { take?: number; skip?: number; query?: string } = {}) {
+  if (env.DEMO_MODE) {
+    const query = options.query ? normalizeSearchText(options.query) : "";
+    const filtered = demoPosts
+      .filter((post) => post.status === PostStatus.PUBLISHED && (!post.publishedAt || post.publishedAt <= getNow()))
+      .filter((post) => {
+        if (!query) return true;
+        return normalizeSearchText([post.title, post.excerpt, post.contentHtml].join(" ")).includes(query);
+      })
+      .sort((left, right) => (right.publishedAt?.getTime() ?? 0) - (left.publishedAt?.getTime() ?? 0));
+
+    return filtered.slice(options.skip ?? 0, (options.skip ?? 0) + (options.take ?? 10));
+  }
+
   const now = getNow();
   return prisma.post.findMany({
     where: {
@@ -265,6 +305,11 @@ export async function searchPublishedPosts(query: string, take = 20) {
 
 export async function listPublishedPostsPage(options: { take: number; skip: number }) {
   const posts = await listPublishedPosts({ take: options.take, skip: options.skip });
+  if (env.DEMO_MODE) {
+    const total = demoPosts.filter((post) => post.status === PostStatus.PUBLISHED && (!post.publishedAt || post.publishedAt <= getNow())).length;
+    return { posts, total, hasMore: options.skip + posts.length < total };
+  }
+
   const now = getNow();
   const total = await prisma.post.count({
     where: getLivePublishedPostWhere(now)
@@ -410,6 +455,10 @@ function getLevenshteinDistance(a: string, b: string) {
 }
 
 export async function getPublishedPostBySlug(slug: string) {
+  if (env.DEMO_MODE) {
+    return demoPosts.find((post) => post.slug === slug && post.status === PostStatus.PUBLISHED && (!post.publishedAt || post.publishedAt <= getNow())) ?? null;
+  }
+
   const now = getNow();
   return prisma.post.findFirst({
     where: { slug, ...getLivePublishedPostWhere(now) },
@@ -418,6 +467,8 @@ export async function getPublishedPostBySlug(slug: string) {
 }
 
 export async function listAdminPosts(filters?: AdminPostFilters): Promise<AdminPostWithRelations[]> {
+  if (env.DEMO_MODE) return filterDemoAdminPosts(filters);
+
   return prisma.post.findMany({
     where: buildAdminPostWhere(filters),
     include: postInclude,
@@ -455,6 +506,17 @@ export async function listAdminPostsPage(options: { take: number; skip: number; 
 }
 
 export async function getAdminPostSummary() {
+  if (env.DEMO_MODE) {
+    const now = getNow();
+    return {
+      total: demoPosts.length,
+      published: demoPosts.filter((post) => post.status === PostStatus.PUBLISHED && (!post.publishedAt || post.publishedAt <= now)).length,
+      scheduled: demoPosts.filter((post) => post.status === PostStatus.PUBLISHED && Boolean(post.publishedAt && post.publishedAt > now)).length,
+      drafts: demoPosts.filter((post) => post.status === PostStatus.DRAFT).length,
+      unpublishedChanges: demoPosts.filter((post) => post.hasUnpublishedChanges).length
+    };
+  }
+
   const now = getNow();
   const [total, published, scheduled, drafts, unpublishedChanges] = await Promise.all([
     prisma.post.count(),
@@ -468,11 +530,15 @@ export async function getAdminPostSummary() {
 }
 
 export async function getAdminPost(id: string) {
+  if (env.DEMO_MODE) return demoPosts.find((post) => post.id === id) ?? null;
+
   return prisma.post.findUnique({ where: { id }, include: postInclude });
 }
 
 export async function createPost(input: PostInput, authorId: string, id?: string) {
   const contentHtml = sanitizePostHtml(normalizeMediaUrlsInHtml(input.contentHtml ?? ""));
+  if (env.DEMO_MODE) return createDemoPostFromInput({ ...input, contentHtml });
+
   return prisma.post.create({
     data: {
       id,
@@ -499,6 +565,7 @@ export async function createPost(input: PostInput, authorId: string, id?: string
 
 export async function updatePost(id: string, input: PostInput) {
   const contentHtml = sanitizePostHtml(normalizeMediaUrlsInHtml(input.contentHtml ?? ""));
+  if (env.DEMO_MODE) return createDemoPostFromInput({ ...input, contentHtml });
 
   return prisma.post.update({
     where: { id },
@@ -528,6 +595,11 @@ export async function updatePost(id: string, input: PostInput) {
 }
 
 export async function updatePostStatus(id: string, status: PostStatus) {
+  if (env.DEMO_MODE) {
+    const post = demoPosts.find((item) => item.id === id);
+    return post ? { ...post, status, publishedAt: status === PostStatus.PUBLISHED ? post.publishedAt ?? getNow() : null } : null;
+  }
+
   const current = await prisma.post.findUnique({ where: { id } });
   if (!current) throw new Error("Post not found");
 
@@ -567,10 +639,18 @@ export async function updatePostStatus(id: string, status: PostStatus) {
 }
 
 export async function deletePost(id: string) {
+  if (env.DEMO_MODE) return demoPosts.find((post) => post.id === id) ?? null;
+
   return prisma.post.delete({ where: { id } });
 }
 
 export async function postsByCategory(slug: string) {
+  if (env.DEMO_MODE) {
+    return demoPosts
+      .filter((post) => post.status === PostStatus.PUBLISHED && post.categories.some((category) => category.slug === slug))
+      .sort((left, right) => (right.publishedAt?.getTime() ?? 0) - (left.publishedAt?.getTime() ?? 0));
+  }
+
   return prisma.post.findMany({
     where: { categories: { some: { slug } }, ...getLivePublishedPostWhere() },
     include: postInclude,
@@ -579,6 +659,12 @@ export async function postsByCategory(slug: string) {
 }
 
 export async function postsByTag(slug: string) {
+  if (env.DEMO_MODE) {
+    return demoPosts
+      .filter((post) => post.status === PostStatus.PUBLISHED && post.tags.some((tag) => tag.slug === slug))
+      .sort((left, right) => (right.publishedAt?.getTime() ?? 0) - (left.publishedAt?.getTime() ?? 0));
+  }
+
   return prisma.post.findMany({
     where: { tags: { some: { slug } }, ...getLivePublishedPostWhere() },
     include: postInclude,

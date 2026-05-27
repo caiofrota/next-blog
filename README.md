@@ -97,6 +97,20 @@ pnpm admin:create # Create an admin user
 pnpm wp:migrate   # Run WordPress migration
 ```
 
+## Demo Mode
+
+Use `DEMO_MODE=true` to publish a safe public demo of NextBlog.
+
+In demo mode, the app uses in-memory posts, categories, tags, media assets, newsletter subscribers, and an admin user. Admin actions return successful simulated responses, but they do not persist posts, users, categories, tags, newsletter subscriptions, sessions, uploaded images, or sent emails.
+
+```env
+DEMO_MODE="true"
+DEMO_ADMIN_EMAIL="demo@nextblog.dev"
+DEMO_ADMIN_PASSWORD="nextblog-demo"
+```
+
+SMTP and R2 variables can stay empty in demo mode. Keep a valid `DATABASE_URL` string available for Prisma tooling during build, but runtime demo reads and writes are served from the demo seed instead of the database.
+
 ## Local WSL Access
 
 When running the app inside WSL and accessing it from Windows or another device on the network, use the proxy helpers:
