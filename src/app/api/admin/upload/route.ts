@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import sharp from "sharp";
 import { requireAdmin } from "@/blog-engine/services/auth";
 import { createMediaAsset } from "@/blog-engine/services/media";
 import { getStorageProvider } from "@/blog-engine/storage/r2-storage";
@@ -9,6 +10,10 @@ import { env } from "@/lib/env";
 import { createDemoMediaAsset } from "@/blog-engine/demo/data";
 
 const MAX_UPLOAD_SIZE_BYTES = 8 * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 2560;
+const OUTPUT_IMAGE_TYPE = "image/webp";
+
+export const runtime = "nodejs";
 
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -39,24 +44,39 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "bin";
-  const fileName = `${Date.now()}-${slugify(file.name.replace(/\.[^.]+$/, ""))}.${ext}`;
-  const key = `uploads/${new Date().getFullYear()}/${fileName}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
-
   if (env.DEMO_MODE) {
     const asset = createDemoMediaAsset(file.name, file.type, file.size, altText || null);
     return NextResponse.json({ ...asset, url: getPublicStorageUrl(asset.key), simulated: true });
   }
 
+  let buffer: Buffer;
+
+  try {
+    buffer = await sharp(Buffer.from(await file.arrayBuffer()), { animated: true })
+      .rotate()
+      .resize({
+        width: MAX_IMAGE_DIMENSION,
+        height: MAX_IMAGE_DIMENSION,
+        fit: "inside",
+        withoutEnlargement: true
+      })
+      .webp({ quality: 82, effort: 4, smartSubsample: true })
+      .toBuffer();
+  } catch {
+    return NextResponse.json({ error: "Não foi possível processar esta imagem." }, { status: 422 });
+  }
+
+  const fileName = `${Date.now()}-${slugify(file.name.replace(/\.[^.]+$/, ""))}.webp`;
+  const key = `uploads/${new Date().getFullYear()}/${fileName}`;
+
   const storage = getStorageProvider();
-  const uploaded = await storage.putObject({ key, body: buffer, contentType: file.type });
+  const uploaded = await storage.putObject({ key, body: buffer, contentType: OUTPUT_IMAGE_TYPE });
   const asset = await createMediaAsset({
     key: uploaded.key,
     provider: "r2",
-    filename: file.name,
-    mimeType: file.type,
-    size: file.size,
+    filename: fileName,
+    mimeType: OUTPUT_IMAGE_TYPE,
+    size: buffer.length,
     altText: altText || null
   });
 
